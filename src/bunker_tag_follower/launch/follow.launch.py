@@ -27,7 +27,8 @@ def start_nodes(context):
     validate_follow_configuration(config)
     nodes = [
         Node(package='bunker_tag_follower', executable='follower', name='tag_follower',
-             output='screen', parameters=[config, {'mode': mode, 'centered_forward_mount': centered}],
+             output='screen', parameters=[config, {'mode': mode, 'centered_forward_mount': centered,
+                                                   'hardware': hardware}],
              on_exit=[EmitEvent(event=Shutdown(reason='Follower exited'))]),
         Node(package='bunker_tag_follower', executable='velocity_guard', name='follow_velocity_guard',
              output='screen', parameters=[config, {'mode': mode, 'hardware': hardware}],
