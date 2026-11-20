@@ -1,0 +1,15 @@
+diff --git a/astra_camera/scripts/56-orbbec-usb.rules b/astra_camera/scripts/56-orbbec-usb.rules
+old mode 100644
+new mode 100755
+diff --git a/astra_camera/scripts/depth_to_color.py b/astra_camera/scripts/depth_to_color.py
+old mode 100644
+new mode 100755
+diff --git a/astra_camera/scripts/format_output_camera_params.py b/astra_camera/scripts/format_output_camera_params.py
+old mode 100644
+new mode 100755
+diff --git a/astra_camera/scripts/format_output_supported_video_modes.py b/astra_camera/scripts/format_output_supported_video_modes.py
+old mode 100644
+new mode 100755
+diff --git a/astra_camera/scripts/install.sh b/astra_camera/scripts/install.sh
+old mode 100644
+new mode 100755

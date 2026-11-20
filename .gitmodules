@@ -1,0 +1,12 @@
+[submodule "apriltag_ros"]
+	path = src/apriltag_ros
+	url = https://github.com/christianrauch/apriltag_ros.git
+[submodule "bunker_ros2"]
+	path = src/bunker_ros2
+	url = https://github.com/agilexrobotics/bunker_ros2.git
+[submodule "ros2_astra_camera"]
+	path = src/ros2_astra_camera
+	url = https://github.com/orbbec/ros2_astra_camera.git
+[submodule "ugv_sdk"]
+	path = src/ugv_sdk
+	url = https://github.com/agilexrobotics/ugv_sdk.git

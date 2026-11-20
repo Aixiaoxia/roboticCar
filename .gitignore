@@ -1,0 +1,9 @@
+/build/
+/install/
+/log/
+/.vscode/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+/data/system_identification/
+/data/identification_results/

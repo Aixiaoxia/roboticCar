@@ -1,0 +1,3 @@
+#!/usr/bin/python3
+from bunker_tag_follower.depth_node import main
+main()

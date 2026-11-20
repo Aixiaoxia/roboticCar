@@ -1,0 +1,59 @@
+# Bunker 跟随统一配置
+# 推荐从 ~/agx_ws/follow_config.yaml 编辑（与本文件是同一个配置入口）。
+# 修改后：先停止/禁用并确认车停，退出总启动，再运行 ~/agx_ws/scripts/start_all.sh。
+# 无需重新编译；运行中的节点不会自动应用文件修改。
+
+# 1. 共用限速：同时用于跟随控制器和独立速度保护，只需修改这一处。
+/**:
+  ros__parameters:
+    max_linear: 1.0            # 前进速度上限，m/s；不代表始终按此速度行驶
+    max_angular: 0.5           # 左右转向速度上限，rad/s
+
+# 2. 加速度与指令保护
+follow_velocity_guard:
+  ros__parameters:
+    linear_accel: 0.5          # 前进加速度限制，m/s²
+    angular_accel: 0.2         # 转向角加速度限制，rad/s²
+    timeout: 0.3              # 候选速度/路径心跳超时，秒
+    base_frame: base_link      # 安装模式的车体坐标系；与下方保持一致
+
+# 3. 跟随距离、响应与 KF
+# 注意：不要在本节点里重复写 max_linear/max_angular，否则会覆盖上面的共用限速。
+tag_follower:
+  ros__parameters:
+    desired_distance: 0.3     # 目标保持距离，米（平面相机模型下从镜头量起）
+    distance_deadband: 0.08   # 距离死区，米；正中距离 > 0.58 m 才开始前进
+    minimum_distance: 0.2    # 小于此距离立即给出零速度，不自动倒车
+    maximum_distance: 10.0     # 大于此距离停止跟随，米
+    linear_gain: 0.2          # 距离误差 -> 前进速度；增大响应更强
+    angular_gain: 0.6         # 左右偏角 -> 转向速度；增大转向更强
+    heading_deadband: 0.06    # 转向死区，弧度
+    turn_only_angle: 0.25     # 偏角超过此值先转向、不前进，弧度
+
+    acquire_frames: 1        # 几帧有效检测后跟随；当前首帧即可
+    minimum_margin: 20.0     # AprilTag 最低 decision_margin
+    observation_timeout: 0.25 # 目标观测超时停车，秒；不靠 KF 预测延长行驶
+    control_rate: 20.0        # 跟随计算频率，Hz
+
+    kf:
+      enabled: true          # 普通卡尔曼滤波开关
+      position_std: 0.04     # 位置测量噪声标准差，米；越大通常越平滑
+      acceleration_std: 2.0  # 相对加速度过程噪声，m/s²；不是底盘加速度限制
+      initial_velocity_std: 1.0 # 初始速度不确定性，m/s；实际初始估计速度为零
+
+    tag_id: 0                # 跟随目标 ID；改变时还需同步 AprilTag 检测配置
+    tag_frame: target_tag
+    camera_frame: camera_color_optical_frame
+    base_frame: base_link
+    detections_topic: /apriltag/detections
+
+# 4. 当前现场深度检查设置（保留用户现有选择，没有额外取消其他保护）
+follow_depth_clearance:
+  ros__parameters:
+    depth_topic: /camera/depth/image_raw
+    stop_distance: 0.2        # 相机深度小于此值停车，米；不是车头净空
+    minimum_valid_fraction: 0.2 # 全图有效深度最低比例，0.2 = 20%
+    check_blind_sectors: false # 是否检查局部分区盲区
+    minimum_tile_valid_fraction: 0.15 # 上一项启用时，分区有效率阈值
+    check_depth_timeout: false # 是否在深度图过期时停车；false 会沿用旧结果
+    timeout: 0.2              # 上一项启用时的深度超时，秒

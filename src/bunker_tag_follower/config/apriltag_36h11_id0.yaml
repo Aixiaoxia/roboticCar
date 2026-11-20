@@ -1,0 +1,19 @@
+/**:
+  ros__parameters:
+    image_transport: raw
+    family: '36h11'
+    # Physical edge size is supplied explicitly by launch argument tag_size.
+    max_hamming: 0
+    qos_profile: latest
+    max_image_age: 0.1
+    detector:
+      threads: 2
+      decimate: 2.0
+      blur: 0.0
+      refine: true
+      sharpening: 0.25
+      debug: false
+    pose_estimation_method: pnp
+    tag:
+      ids: [0]
+      frames: ['target_tag']

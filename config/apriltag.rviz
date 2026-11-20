@@ -1,0 +1,43 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ''
+  Global Options:
+    Background Color: 40; 40; 40
+    Fixed Frame: camera_color_optical_frame
+    Frame Rate: 30
+  Displays:
+    - Class: rviz_default_plugins/TF
+      Name: Coordinate frames
+      Enabled: true
+      Frame Timeout: 0.5
+      Show Axes: true
+      Show Arrows: true
+      Show Names: true
+      Marker Scale: 0.3
+      Frames:
+        All Enabled: true
+    - Class: rviz_default_plugins/Image
+      Name: AprilTag overlay
+      Enabled: true
+      Topic:
+        Value: /apriltag/image_overlay
+        Reliability Policy: Reliable
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Depth: 2
+      Transport Hint: raw
+  Views:
+    Current:
+      Class: rviz_default_plugins/Orbit
+      Distance: 2.0
+      Focal Point:
+        X: 0
+        Y: 0
+        Z: 0.7
+      Pitch: 0.3
+      Yaw: 0.5
+Window Geometry:
+  Width: 1200
+  Height: 800

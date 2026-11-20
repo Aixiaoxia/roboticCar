@@ -1,0 +1,58 @@
+diff --git a/src/AprilTagNode.cpp b/src/AprilTagNode.cpp
+index ca6e437..45c30b5 100644
+--- a/src/AprilTagNode.cpp
++++ b/src/AprilTagNode.cpp
+@@ -55,7 +55,17 @@ descr(const std::string& description, const bool& read_only = false)
+     return descr;
+ }
+ 
++// Keep only the newest pending camera sample while detection is busy.
++rmw_qos_profile_t latest_camera_qos()
++{
++    auto qos = rmw_qos_profile_sensor_data;
++    qos.history = RMW_QOS_POLICY_HISTORY_KEEP_LAST;
++    qos.depth = 1;
++    return qos;
++}
++
+ const static std::unordered_map<std::string, rmw_qos_profile_t> qos_profiles{
++    {"latest", latest_camera_qos()},
+     {"default", rmw_qos_profile_default},
+     {"sensor_data", rmw_qos_profile_sensor_data},
+     {"system_default", rmw_qos_profile_system_default},
+@@ -78,6 +88,7 @@ private:
+     double tag_edge_size;
+     std::atomic<int> max_hamming;
+     std::atomic<bool> profile;
++    const double max_image_age;
+     std::unordered_map<int, std::string> tag_frames;
+     std::unordered_map<int, double> tag_sizes;
+ 
+@@ -102,6 +113,7 @@ AprilTagNode::AprilTagNode(const rclcpp::NodeOptions& options)
+     // parameter
+     cb_parameter(add_on_set_parameters_callback(std::bind(&AprilTagNode::onParameter, this, std::placeholders::_1))),
+     td(apriltag_detector_create()),
++    max_image_age(declare_parameter("max_image_age", 0.1, descr("Skip images older than this many seconds; zero disables the age check", true))),
+     // topics
+     sub_cam{
+ #ifdef image_transport_NODE_INTERFACE
+@@ -115,7 +127,7 @@ AprilTagNode::AprilTagNode(const rclcpp::NodeOptions& options)
+ #ifdef image_transport_QoS
+         rclcpp::QoS{rclcpp::QoSInitialization::from_rmw(
+ #endif
+-            qos_profiles.at(declare_parameter("qos_profile", "default", descr("qos profile to use. 'default', 'sensor_data' or 'system_default'", true)))
++            qos_profiles.at(declare_parameter("qos_profile", "default", descr("qos profile to use. 'latest', 'default', 'sensor_data' or 'system_default'", true)))
+ #ifdef image_transport_QoS
+                 )}
+ #endif
+@@ -199,6 +211,10 @@ AprilTagNode::~AprilTagNode()
+ void AprilTagNode::onCamera(const sensor_msgs::msg::Image::ConstSharedPtr& msg_img,
+                             const sensor_msgs::msg::CameraInfo::ConstSharedPtr& msg_ci)
+ {
++    if(max_image_age > 0.0 &&
++       (now() - rclcpp::Time(msg_img->header.stamp)).seconds() > max_image_age) {
++        return;
++    }
+     // camera intrinsics for rectified images
+     const std::array<double, 4> intrinsics = {msg_ci->p[0], msg_ci->p[5], msg_ci->p[2], msg_ci->p[6]};
+ 
