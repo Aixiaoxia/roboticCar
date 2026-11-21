@@ -6,12 +6,13 @@ import argparse
 import yaml
 
 from .policy import FollowConfig
+from .follow_pi import PIConfig
 
 
 def validate_follow_configuration(filename):
     path = Path(filename).expanduser()
     try:
-        data = yaml.safe_load(path.read_text())
+        data = yaml.safe_load(path.read_text(encoding='utf-8'))
         if not isinstance(data, dict):
             raise ValueError('YAML root must be a mapping')
         shared = data.get('/**', {}).get('ros__parameters', {})
@@ -19,6 +20,8 @@ def validate_follow_configuration(filename):
         merged = {**shared, **specific}
         controls = {field.name: merged[field.name] for field in fields(FollowConfig)
                     if field.name in merged}
+        PIConfig(**{field.name: merged[field.name] for field in fields(PIConfig)
+                    if field.name in merged})
         return FollowConfig(**controls)
     except (OSError, yaml.YAMLError, TypeError, ValueError, AttributeError) as error:
         raise ValueError(f'配置文件错误：{path}\n{error}') from error

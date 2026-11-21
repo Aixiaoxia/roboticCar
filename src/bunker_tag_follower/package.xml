@@ -21,6 +21,7 @@
   <exec_depend>ament_index_python</exec_depend>
   <exec_depend>astra_camera</exec_depend>
   <exec_depend>bunker_base</exec_depend>
+  <exec_depend>bunker_msgs</exec_depend>
   <exec_depend>apriltag_ros</exec_depend>
   <exec_depend>python3-opencv</exec_depend>
   <exec_depend>python_qt_binding</exec_depend>
