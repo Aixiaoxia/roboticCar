@@ -65,3 +65,7 @@ for name in apriltag_ros ros2_astra_camera ugv_sdk; do
     git -C "src/$name" apply "$PWD/patches/$name.patch" || exit 1
 done
 ```
+
+## Bunker RGB-D 建图与仿真
+
+见 [建图依赖、House 仿真复现和 Git 发布步骤](docs/SLAM_AND_REPOSITORY.md)。

@@ -1,0 +1,324 @@
+diff --git a/rtabmap_demos/config/bunker_house_rgbd.rviz b/rtabmap_demos/config/bunker_house_rgbd.rviz
+new file mode 100644
+index 00000000..75b179a8
+--- /dev/null
++++ b/rtabmap_demos/config/bunker_house_rgbd.rviz
+@@ -0,0 +1,90 @@
++Panels:
++  - Class: rviz_common/Displays
++    Name: Displays
++  - Class: rviz_common/Views
++    Name: Views
++Visualization Manager:
++  Class: ""
++  Displays:
++    - Class: rviz_default_plugins/Map
++      Name: Occupancy Map
++      Enabled: true
++      Color Scheme: map
++      Draw Behind: true
++      Topic:
++        Depth: 1
++        Durability Policy: Transient Local
++        History Policy: Keep Last
++        Reliability Policy: Reliable
++        Value: /map
++      Value: true
++    - Class: rviz_default_plugins/Map
++      Name: Global Costmap
++      Enabled: true
++      Color Scheme: costmap
++      Alpha: 0.4
++      Draw Behind: false
++      Topic:
++        Depth: 1
++        Durability Policy: Transient Local
++        History Policy: Keep Last
++        Reliability Policy: Reliable
++        Value: /global_costmap/costmap
++      Value: true
++    - Class: rviz_default_plugins/Map
++      Name: Local Costmap
++      Enabled: true
++      Color Scheme: costmap
++      Alpha: 0.65
++      Draw Behind: false
++      Topic:
++        Depth: 1
++        Durability Policy: Transient Local
++        History Policy: Keep Last
++        Reliability Policy: Reliable
++        Value: /local_costmap/costmap
++      Value: true
++    - Class: rviz_default_plugins/Path
++      Name: Navigation Plan
++      Enabled: true
++      Topic:
++        Value: /plan
++      Value: true
++    - Class: rviz_default_plugins/TF
++      Name: Robot Pose
++      Enabled: true
++      Show Axes: true
++      Show Arrows: false
++      Show Names: true
++      Value: true
++    - Class: rviz_default_plugins/PointCloud2
++      Name: Current Depth Cloud
++      Enabled: false
++      Decay Time: 0
++      Topic:
++        Depth: 5
++        Durability Policy: Volatile
++        History Policy: Keep Last
++        Reliability Policy: Best Effort
++        Value: /camera/cloud
++      Value: false
++  Global Options:
++    Fixed Frame: map
++    Frame Rate: 30
++  Tools:
++    - Class: rviz_default_plugins/Interact
++    - Class: rviz_default_plugins/MoveCamera
++    - Class: rviz_default_plugins/Select
++    - Class: nav2_rviz_plugins/GoalTool
++  Views:
++    Current:
++      Class: rviz_default_plugins/TopDownOrtho
++      Name: Current View
++      Scale: 85
++      Target Frame: <Fixed Frame>
++      X: 0
++      Y: 0
++    Saved: ~
++Window Geometry:
++  Width: 1100
++  Height: 750
+diff --git a/rtabmap_demos/data/bunker/bunker_rgbd.sdf b/rtabmap_demos/data/bunker/bunker_rgbd.sdf
+new file mode 100644
+index 00000000..2577c7a8
+--- /dev/null
++++ b/rtabmap_demos/data/bunker/bunker_rgbd.sdf
+@@ -0,0 +1,107 @@
++<?xml version="1.0"?>
++<sdf version="1.7">
++  <!-- Approximate Bunker and forward-facing RGB-D camera for SLAM testing. -->
++  <model name="bunker_rgbd">
++    <link name="base_footprint">
++      <inertial>
++        <pose>0 0 .17 0 0 0</pose>
++        <mass>20</mass>
++        <inertia><ixx>.32</ixx><iyy>.75</iyy><izz>.95</izz></inertia>
++      </inertial>
++      <collision name="chassis">
++        <pose>0 0 .18 0 0 0</pose>
++        <geometry><box><size>.68 .44 .18</size></box></geometry>
++      </collision>
++      <visual name="chassis">
++        <pose>0 0 .18 0 0 0</pose>
++        <geometry><box><size>.68 .44 .18</size></box></geometry>
++        <material><ambient>.16 .23 .30 1</ambient><diffuse>.22 .32 .42 1</diffuse></material>
++      </visual>
++      <collision name="front_support">
++        <pose>.25 0 .045 0 0 0</pose>
++        <geometry><sphere><radius>.045</radius></sphere></geometry>
++        <surface><friction><ode><mu>0</mu><mu2>0</mu2></ode></friction></surface>
++      </collision>
++      <collision name="rear_support">
++        <pose>-.25 0 .045 0 0 0</pose>
++        <geometry><sphere><radius>.045</radius></sphere></geometry>
++        <surface><friction><ode><mu>0</mu><mu2>0</mu2></ode></friction></surface>
++      </collision>
++      <visual name="left_track">
++        <pose>0 .225 .105 0 0 0</pose>
++        <geometry><box><size>.66 .10 .19</size></box></geometry>
++        <material><ambient>.08 .08 .08 1</ambient><diffuse>.12 .12 .12 1</diffuse></material>
++      </visual>
++      <visual name="right_track">
++        <pose>0 -.225 .105 0 0 0</pose>
++        <geometry><box><size>.66 .10 .19</size></box></geometry>
++        <material><ambient>.08 .08 .08 1</ambient><diffuse>.12 .12 .12 1</diffuse></material>
++      </visual>
++      <visual name="camera_housing">
++        <pose>.31 0 .31 0 0 0</pose>
++        <geometry><box><size>.06 .14 .05</size></box></geometry>
++      </visual>
++      <sensor name="camera" type="depth">
++        <pose>.35 0 .31 0 0 0</pose>
++        <always_on>true</always_on>
++        <update_rate>20</update_rate>
++        <camera>
++          <horizontal_fov>1.02974</horizontal_fov>
++          <image><width>640</width><height>480</height><format>R8G8B8</format></image>
++          <clip><near>.05</near><far>8</far></clip>
++        </camera>
++        <plugin name="camera_driver" filename="libgazebo_ros_camera.so">
++          <camera_name>camera</camera_name>
++          <frame_name>camera_rgb_optical_frame</frame_name>
++        </plugin>
++      </sensor>
++    </link>
++    <link name="left_wheel">
++      <pose>0 .225 .10 1.57079632679 0 0</pose>
++      <inertial>
++        <mass>1</mass>
++        <inertia><ixx>.003</ixx><iyy>.003</iyy><izz>.005</izz></inertia>
++      </inertial>
++      <collision name="wheel">
++        <geometry><cylinder><radius>.10</radius><length>.10</length></cylinder></geometry>
++      </collision>
++    </link>
++    <joint name="left_wheel_joint" type="revolute">
++      <parent>base_footprint</parent>
++      <child>left_wheel</child>
++      <axis><xyz expressed_in="__model__">0 1 0</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis>
++    </joint>
++
++    <link name="right_wheel">
++      <pose>0 -.225 .10 1.57079632679 0 0</pose>
++      <inertial>
++        <mass>1</mass>
++        <inertia><ixx>.003</ixx><iyy>.003</iyy><izz>.005</izz></inertia>
++      </inertial>
++      <collision name="wheel">
++        <geometry><cylinder><radius>.10</radius><length>.10</length></cylinder></geometry>
++      </collision>
++    </link>
++    <joint name="right_wheel_joint" type="revolute">
++      <parent>base_footprint</parent>
++      <child>right_wheel</child>
++      <axis><xyz expressed_in="__model__">0 1 0</xyz><limit><lower>-1e16</lower><upper>1e16</upper></limit></axis>
++    </joint>
++
++    <plugin name="bunker_drive" filename="libgazebo_ros_diff_drive.so">
++      <update_rate>30</update_rate>
++      <left_joint>left_wheel_joint</left_joint>
++      <right_joint>right_wheel_joint</right_joint>
++      <wheel_separation>.45</wheel_separation>
++      <wheel_diameter>.20</wheel_diameter>
++      <max_wheel_torque>20</max_wheel_torque>
++      <max_wheel_acceleration>2</max_wheel_acceleration>
++      <command_topic>cmd_vel</command_topic>
++      <publish_odom>true</publish_odom>
++      <publish_odom_tf>true</publish_odom_tf>
++      <odometry_topic>odom</odometry_topic>
++      <odometry_frame>odom</odometry_frame>
++      <robot_base_frame>base_footprint</robot_base_frame>
++    </plugin>
++  </model>
++</sdf>
+diff --git a/rtabmap_demos/launch/bunker/bunker_house_rgbd.launch.py b/rtabmap_demos/launch/bunker/bunker_house_rgbd.launch.py
+new file mode 100644
+index 00000000..995350f5
+--- /dev/null
++++ b/rtabmap_demos/launch/bunker/bunker_house_rgbd.launch.py
+@@ -0,0 +1,60 @@
++from pathlib import Path
++
++from ament_index_python.packages import get_package_share_path
++from launch import LaunchDescription
++from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
++from launch.conditions import IfCondition
++from launch.launch_description_sources import PythonLaunchDescriptionSource
++from launch.substitutions import LaunchConfiguration
++from launch_ros.actions import Node, SetParameter
++
++
++def include(path, **arguments):
++    return IncludeLaunchDescription(
++        PythonLaunchDescriptionSource(str(path)), launch_arguments=arguments.items())
++
++
++def generate_launch_description():
++    gazebo = get_package_share_path('gazebo_ros')
++    turtlebot3 = get_package_share_path('turtlebot3_gazebo')
++    demos = get_package_share_path('rtabmap_demos')
++    world = turtlebot3 / 'worlds' / 'turtlebot3_house.world'
++    model = demos / 'data' / 'bunker' / 'bunker_rgbd.sdf'
++
++    return LaunchDescription([
++        DeclareLaunchArgument('gui', default_value='true', description='Show Gazebo GUI'),
++        DeclareLaunchArgument('rviz', default_value='true', description='Show the map in RViz'),
++        DeclareLaunchArgument('nav2', default_value='true', description='Start Nav2 navigation'),
++        DeclareLaunchArgument('x_pose', default_value='-2.0'),
++        DeclareLaunchArgument('y_pose', default_value='0.5'),
++        DeclareLaunchArgument(
++            'database_path', default_value=str(Path.home() / '.ros' / 'bunker_house.db'),
++            description='RTAB-Map database. Deleted at startup in mapping mode.'),
++        DeclareLaunchArgument('localization', default_value='false'),
++        include(gazebo / 'launch' / 'gzserver.launch.py', world=str(world)),
++        IncludeLaunchDescription(
++            PythonLaunchDescriptionSource(str(gazebo / 'launch' / 'gzclient.launch.py')),
++            condition=IfCondition(LaunchConfiguration('gui'))),
++        Node(
++            package='gazebo_ros', executable='spawn_entity.py', output='screen',
++            arguments=['-entity', 'bunker_rgbd', '-file', str(model),
++                       '-x', LaunchConfiguration('x_pose'), '-y', LaunchConfiguration('y_pose'),
++                       '-z', '0.02']),
++        Node(
++            package='tf2_ros', executable='static_transform_publisher',
++            arguments=['--x', '0.35', '--y', '0', '--z', '0.31',
++                       '--roll', '-1.57079632679', '--pitch', '0', '--yaw', '-1.57079632679',
++                       '--frame-id', 'base_footprint', '--child-frame-id', 'camera_rgb_optical_frame']),
++        Node(
++            package='rviz2', executable='rviz2', output='screen',
++            arguments=['-d', str(demos / 'config' / 'bunker_house_rgbd.rviz')],
++            parameters=[{'use_sim_time': True}],
++            condition=IfCondition(LaunchConfiguration('rviz'))),
++        IncludeLaunchDescription(
++            PythonLaunchDescriptionSource(
++                str(demos / 'launch' / 'bunker' / 'bunker_rgbd_navigation.launch.py')),
++            condition=IfCondition(LaunchConfiguration('nav2'))),
++        SetParameter(name='database_path', value=LaunchConfiguration('database_path')),
++        include(demos / 'launch' / 'turtlebot3' / 'turtlebot3_rgbd.launch.py',
++                use_sim_time='true', localization=LaunchConfiguration('localization')),
++    ])
+diff --git a/rtabmap_demos/launch/bunker/bunker_rgbd_navigation.launch.py b/rtabmap_demos/launch/bunker/bunker_rgbd_navigation.launch.py
+new file mode 100644
+index 00000000..3a3aff83
+--- /dev/null
++++ b/rtabmap_demos/launch/bunker/bunker_rgbd_navigation.launch.py
+@@ -0,0 +1,30 @@
++from ament_index_python.packages import get_package_share_path
++from launch import LaunchDescription
++from launch.actions import IncludeLaunchDescription
++from launch.launch_description_sources import PythonLaunchDescriptionSource
++from nav2_common.launch import RewrittenYaml
++
++
++def generate_launch_description():
++    demos = get_package_share_path('rtabmap_demos')
++    nav2 = get_package_share_path('nav2_bringup')
++    params = RewrittenYaml(
++        source_file=str(demos / 'params' / 'humble' / 'turtlebot3_rgbd_nav2_params.yaml'),
++        param_rewrites={
++            'robot_base_frame': 'base_footprint',
++            # 0.68 m chassis length and 0.55 m outer track width in bunker_rgbd.sdf.
++            'robot_radius': '[[0.34, 0.275], [0.34, -0.275], [-0.34, -0.275], [-0.34, 0.275]]',
++            'controller_server.ros__parameters.FollowPath.trans_stopped_velocity': '0.05',
++        },
++        key_rewrites={'robot_radius': 'footprint'},
++        convert_types=True,
++    )
++    return LaunchDescription([
++        IncludeLaunchDescription(
++            PythonLaunchDescriptionSource(str(nav2 / 'launch' / 'navigation_launch.py')),
++            launch_arguments={
++                'params_file': params,
++                'use_sim_time': 'true',
++                'autostart': 'true',
++            }.items()),
++    ])
+diff --git a/rtabmap_demos/package.xml b/rtabmap_demos/package.xml
+index 0aa5d81c..047a4695 100644
+--- a/rtabmap_demos/package.xml
++++ b/rtabmap_demos/package.xml
+@@ -18,6 +18,8 @@
+   <exec_depend>rtabmap_rviz_plugins</exec_depend>
+   <exec_depend>rtabmap_viz</exec_depend>
+   <exec_depend>nav2_bringup</exec_depend>
++  <exec_depend>nav2_common</exec_depend>
++  <exec_depend>nav2_rviz_plugins</exec_depend>
+   <exec_depend>rtabmap_examples</exec_depend>
+   <exec_depend>imu_complementary_filter</exec_depend>
+   <exec_depend>find_object_2d</exec_depend>
