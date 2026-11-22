@@ -1,6 +1,7 @@
 """Regression checks for steering signs, no reverse, dropout and watchdog braking."""
 import math
 import pytest
+from bunker_tag_follower.follow_pi import FollowPI, PI, PIConfig
 from bunker_tag_follower.policy import (
     Command, FollowConfig, VelocityGuard, follow_target, optical_to_planar)
 
@@ -102,3 +103,51 @@ def test_guard_never_reverses():
     guard.receive(Command(-1, 0), 10, 20)
     guard.arm(True, 10, 20)
     assert guard.tick(10.1, 20.1)[0].linear == 0
+
+
+def test_pi_integral_stops_at_limit_and_can_unwind():
+    pi = PI(kp=0.0, ki=1.0)
+    assert pi.step(2.0, 1.0, -0.5, 0.5) == 0.5
+    assert pi.step(2.0, 1.0, -0.5, 0.5) == 0.5
+    assert pi.step(-0.1, 1.0, -0.5, 0.5) == pytest.approx(0.4)
+    assert pi.step(-2.0, 1.0, -0.5, 0.5) == -0.5
+    assert pi.step(2.0, 0.0, -0.5, 0.5) == -0.5
+
+
+def test_outer_pi_accumulates_and_resets_after_loss():
+    limits = FollowConfig(max_linear=1.0)
+    controller = FollowPI(limits, PIConfig(controller_mode='outer_pi'))
+    forward = 0.7
+    _, reason = follow_target(forward, 0.0, limits)
+    first, reference, state = controller.step(forward, 0.0, reason, 0.05, 0.05)
+    assert first == reference
+    assert state == 'following'
+    assert first.linear == pytest.approx((0.6 + 0.12 * 0.05) * (0.7 - 0.5 - 0.08))
+    second, _, _ = controller.step(forward, 0.0, reason, 0.05, 0.05)
+    assert second.linear > first.linear > 0.0 and second.angular == 0.0
+    assert controller.step(None, None, 'target_timeout', 0.05, 0.05)[0] == Command()
+    assert controller.step(forward, 0.0, reason, 0.05, 0.05)[0] == first
+
+
+@pytest.mark.parametrize('mode', ['outer_pi', 'cascade_pi'])
+def test_pi_alignment_keeps_linear_zero_and_matches_ros_turn_sign(mode):
+    limits = FollowConfig(max_angular=0.5)
+    controller = FollowPI(limits, PIConfig(controller_mode=mode))
+    for left in (1.0, -1.0):
+        _, reason = follow_target(2.0, left, limits)
+        command, _, _ = controller.step(2.0, left, reason, 0.05, 0.05, Command(0.1, 0.0))
+        assert reason == 'aligning'
+        assert command.linear == 0.0
+        assert command.angular * left > 0.0
+
+
+def test_cascade_uses_bunker_feedback_and_resets_when_it_expires():
+    limits = FollowConfig(max_linear=1.0, max_angular=0.5)
+    controller = FollowPI(limits, PIConfig(controller_mode='cascade_pi'))
+    first, reference, _ = controller.step(0.7, 0.0, 'following', 0.05, 0.05, Command())
+    assert first.linear == pytest.approx(reference.linear * (0.5 + 3.0 * 0.05))
+    faster, _, _ = controller.step(0.7, 0.0, 'following', 0.05, 0.05, Command(0.2, 0.0))
+    assert faster == Command()
+    assert controller.step(0.7, 0.0, 'following', 0.05, 0.05) == (
+        Command(), Command(), 'waiting_for_speed_feedback')
+    assert controller.step(0.7, 0.0, 'following', 0.05, 0.05, Command())[0] == first

@@ -27,6 +27,16 @@ tag_follower:
     maximum_distance: 10.0     # 大于此距离停止跟随，米
     linear_gain: 0.2          # 距离误差 -> 前进速度；增大响应更强
     angular_gain: 0.6         # 左右偏角 -> 转向速度；增大转向更强
+    controller_mode: proportional # proportional / outer_pi / cascade_pi
+    distance_kp: 0.6
+    distance_ki: 0.12
+    heading_kp: 2.0
+    heading_ki: 0.02
+    linear_speed_kp: 0.5     # 仅 cascade_pi
+    linear_speed_ki: 3.0
+    angular_speed_kp: 0.4    # 仅 cascade_pi
+    angular_speed_ki: 4.0
+    speed_feedback_timeout: 0.2 # /bunker_status 数据有效期 (s)
     heading_deadband: 0.06    # 转向死区，弧度
     turn_only_angle: 0.25     # 偏角超过此值先转向、不前进，弧度
 

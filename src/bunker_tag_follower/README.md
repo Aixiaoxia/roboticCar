@@ -3,6 +3,9 @@
 统一编辑 `~/agx_ws/follow_config.yaml`。限速只写一处，两节点共用；文件修改后重启生效。
 详见 [跟随参数配置说明](../../docs/跟随参数配置说明.md)。
 
+`controller_mode` 可选 `proportional`（默认）、`outer_pi` 或 `cascade_pi`。
+模型、参数和预览步骤见 [Simulink PI 移植说明](../../simulation/README.md)。
+
 # 新增：AprilTag 平面 KF
 
 普通 KF 默认启用，首帧无额外等待，目标丢失后仍停车并重置。
