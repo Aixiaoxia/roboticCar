@@ -6,7 +6,7 @@
 | --- | --- |
 | House 仿真建图 | 已验证 Bunker 模型生成、速度控制、深度图和 5 cm 栅格地图 |
 | House 仿真导航 | Nav2 和两层代价地图已验证启动，尚未完成自主行驶测试 |
-| 真车建图 | 本仓库包含 Bunker 和 Astra Pro 驱动，仍需实测相机外参、验证 RGB-D 数据，并补真车 RTAB-Map 启动配置 |
+| 真车建图 | 已记录待验证的 Astra 初始安装外参（前方 90 mm、高 539 mm、水平朝前）；仍需实测修正外参、验证 RGB-D 数据，并补真车 RTAB-Map 启动配置 |
 
 `agx_ws` 是项目主仓库。`rtabmap_ros` 和 RTAB-Map 核心库是独立源码依赖。仓库里的 [House 集成补丁](../patches/rtabmap_ros_bunker_house.patch) 包含 Bunker 模型、仿真启动文件、Nav2 参数覆盖和 RViz 配置。在新机器上应用补丁即可重建这些文件。
 
@@ -87,7 +87,7 @@ ros2 launch rtabmap_demos bunker_house_rgbd.launch.py
 ## 真车建图还需接线和配置
 
 1. 真车使用 Bunker 驱动的 `/odom` 与 `odom → base_link`。选择与仿真分开的 ROS 域。
-2. 实测相机位姿并配置 `base_link → camera_link`，保留 Astra 驱动发布的内部光学 TF。
+2. 先运行 `scripts/start_bunker_camera_tf.sh` 发布初始 `base_link → camera_link`（前方 90 mm、高 539 mm、水平朝前），再用实测结果修正；保留 Astra 驱动发布的内部光学 TF。
 3. 验证 RGB、已配准深度和相机内参话题的尺寸、时间戳与坐标系。Astra Pro 的硬件深度配准默认关闭，须根据实际驱动输出选择对齐方法。
 4. 加载已构建的 RTAB-Map 与 AGX 工作区，增加启动配置并映射上述话题，使用 `frame_id:=base_link` 和 `use_sim_time:=false`。先检查静止时的 TF 和 RGB-D 数据，再人工低速移动验证地图。真车首次建图无需 Nav2 和 AprilTag 跟随。
 

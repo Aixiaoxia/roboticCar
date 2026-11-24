@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+
+import argparse
+import fcntl
+import math
+import os
+from pathlib import Path
+import tempfile
+import time
+
+from action_msgs.msg import GoalStatus
+from nav2_msgs.action import NavigateToPose
+import rclpy
+from rclpy.action import ActionClient
+from rclpy.executors import ExternalShutdownException
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformException, TransformListener
+import yaml
+
+
+def read_config(path):
+    with path.open(encoding='utf-8') as stream:
+        config = yaml.safe_load(stream)
+    if (not isinstance(config, dict)
+            or not isinstance(config.get('frame_id'), str)
+            or not config['frame_id'].strip()
+            or not isinstance(config.get('places'), dict)):
+        raise ValueError(f'配置需要包含 frame_id 和 places：{path}')
+    return config
+
+
+def save_place(path, name, frame, pose, replace):
+    # Lock a separate file so replacing the YAML preserves the lock.
+    with path.with_name(f'.{path.name}.lock').open('a') as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        config = read_config(path) if path.exists() else {'frame_id': frame, 'places': {}}
+        if config['frame_id'] != frame:
+            raise ValueError('记录期间配置的 frame_id 发生变化，请重试')
+        if name in config['places'] and not replace:
+            raise ValueError(f'地点「{name}」已存在。要更新它，请加 --replace')
+        config['places'][name] = pose
+        with tempfile.NamedTemporaryFile(
+            mode='w', encoding='utf-8', dir=path.parent, delete=False
+        ) as stream:
+            temporary_path = Path(stream.name)
+            try:
+                yaml.safe_dump(config, stream, allow_unicode=True, sort_keys=False)
+                stream.flush()
+                os.replace(temporary_path, path)
+            finally:
+                temporary_path.unlink(missing_ok=True)
+
+
+def current_pose(node, frame, base_frame, timeout):
+    buffer = Buffer()
+    listener = TransformListener(buffer, node)
+    deadline = time.monotonic() + timeout
+    try:
+        while rclpy.ok():
+            try:
+                transform = buffer.lookup_transform(frame, base_frame, Time()).transform
+                position = transform.translation
+                rotation = transform.rotation
+                yaw = math.atan2(
+                    2 * (rotation.w * rotation.z + rotation.x * rotation.y),
+                    1 - 2 * (rotation.y ** 2 + rotation.z ** 2),
+                )
+                return {'x': position.x, 'y': position.y, 'yaw': yaw}
+            except TransformException as error:
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError(f'等待 TF {frame} → {base_frame} 超时：{error}') from error
+                rclpy.spin_once(node, timeout_sec=min(0.2, remaining))
+        raise RuntimeError('ROS 已关闭')
+    finally:
+        listener.unregister()
+
+
+def navigate(node, action_name, frame, pose, timeout):
+    if not isinstance(pose, dict):
+        raise ValueError('地点必须包含数字 x、y 和 yaw')
+    x, y, yaw = (pose.get(key) for key in ('x', 'y', 'yaw'))
+    if not all(type(value) in (int, float) and math.isfinite(value) for value in (x, y, yaw)):
+        raise ValueError('地点必须包含有限数字 x、y 和 yaw')
+
+    goal = NavigateToPose.Goal()
+    goal.pose.header.frame_id = frame
+    goal.pose.pose.position.x = float(x)
+    goal.pose.pose.position.y = float(y)
+    goal.pose.pose.orientation.z = math.sin(yaw / 2)
+    goal.pose.pose.orientation.w = math.cos(yaw / 2)
+
+    client = ActionClient(node, NavigateToPose, action_name)
+    if not client.wait_for_server(timeout_sec=timeout):
+        raise RuntimeError(f'等待 {action_name} 超时，请检查 Nav2 是否已启动')
+    response = client.send_goal_async(goal)
+    rclpy.spin_until_future_complete(node, response, timeout_sec=timeout)
+    if not response.done():
+        raise RuntimeError('等待 Nav2 确认目标超时，请检查机器人是否已接收目标')
+    handle = response.result()
+    if not handle.accepted:
+        raise RuntimeError('Nav2 拒绝了目标')
+
+    print('目标已接收，等待导航结果', flush=True)
+    result = handle.get_result_async()
+    rclpy.spin_until_future_complete(node, result)
+    status = result.result().status
+    if status != GoalStatus.STATUS_SUCCEEDED:
+        reason = {
+            GoalStatus.STATUS_CANCELED: '已取消',
+            GoalStatus.STATUS_ABORTED: '已中止',
+        }.get(status, f'状态码 {status}')
+        raise RuntimeError(f'导航{reason}')
+
+
+def main():
+    parser = argparse.ArgumentParser(description='保存或导航到 Bunker 的命名地点')
+    parser.add_argument('--config', required=True, type=Path, help='地点 YAML 路径')
+    commands = parser.add_subparsers(dest='command', required=True)
+    record = commands.add_parser('record', help='通过 TF 记录小车当前位置')
+    record.add_argument('name', help='地点名称')
+    record.add_argument('--base-frame', default='base_link')
+    record.add_argument('--replace', action='store_true')
+    record.add_argument('--timeout', type=float, default=5.0)
+    go = commands.add_parser('go', help='发送命名地点给 Nav2')
+    go.add_argument('name', help='地点名称')
+    go.add_argument('--action', default='/navigate_to_pose')
+    go.add_argument('--timeout', type=float, default=5.0)
+    commands.add_parser('list', help='列出已记录地点')
+    args = parser.parse_args()
+    path = args.config.expanduser().resolve()
+
+    try:
+        if args.command == 'record' and not path.exists():
+            config = {'frame_id': 'map', 'places': {}}
+        else:
+            config = read_config(path)
+        frame = config['frame_id']
+        places = config['places']
+        if args.command == 'list':
+            for name, pose in places.items():
+                print(f'{name}\t{pose}')
+            if not places:
+                print('配置中还没有地点')
+            return 0
+
+        name = args.name.strip()
+        if not name or not math.isfinite(args.timeout) or args.timeout <= 0:
+            raise ValueError('请提供非空地点名和正数超时')
+        if args.command == 'go' and name not in places:
+            raise ValueError(f'配置中没有地点「{name}」')
+        if args.command == 'record' and name in places and not args.replace:
+            raise ValueError(f'地点「{name}」已存在。要更新它，请加 --replace')
+
+        rclpy.init(args=[])
+        node = rclpy.create_node('bunker_named_places')
+        try:
+            if args.command == 'record':
+                pose = current_pose(node, frame, args.base_frame, args.timeout)
+                save_place(path, name, frame, pose, args.replace)
+                print(f'已保存「{name}」到 {path}，{frame} {pose}')
+            else:
+                navigate(node, args.action, frame, places[name], args.timeout)
+                print(f'已到达「{name}」')
+        finally:
+            node.destroy_node()
+            rclpy.try_shutdown()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        return 130
+    except (OSError, ValueError, RuntimeError, yaml.YAMLError) as error:
+        parser.exit(1, f'{error}\n')
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

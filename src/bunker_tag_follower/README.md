@@ -179,3 +179,34 @@ source ~/agx_ws/setup_humble.bash
 
 已验证：27 项策略/深度测试通过；独立 ROS domain 中的进程测试覆盖转向符号、距离保持、遮挡、手动使能、强制终止 follower 后的停车，以及安装模式的外参缺失/补齐。
 测试未向实际底盘发送运动指令。底盘运动、制动距离、真实安装变换和避障仍需现场验证。
+# 相机外参数据采集
+
+完整的底盘、相机、AprilTag 启动顺序、交互采集和离线求解步骤见[相机外参标定流程](../../docs/BUNKER_ASTRA_相机外参标定流程.md)。采集后可运行 `ros2 run bunker_tag_follower solve_extrinsic <采集文件.jsonl>` 联合求解外参。
+
+固定 AprilTag 标定板后，运行 Astra 相机和 AprilTag 检测节点。项目默认检测 Tag 0；启动时必须把 Tag 黑色外框边长（米）量准：
+
+```bash
+ros2 launch agx_ws apriltag_astra.launch.py tag_size:=0.16
+```
+
+另开终端启动交互采集器：
+
+```bash
+source ~/agx_ws/setup_humble.bash
+ros2 run bunker_tag_follower record_extrinsic
+```
+
+采集器启动脚本使用 `/usr/bin/python3` 并屏蔽用户目录 Python 包，避免 Conda 或 pip 的 NumPy 2 与 ROS Humble `cv_bridge` 的系统 NumPy ABI 冲突。Tag 黑框尺寸若不是 0.15 m，需显式传入同一个实测值，例如 `ros2 run bunker_tag_follower record_extrinsic --ros-args -p tag_size:=0.15`。
+
+窗口显示 Astra 彩色图像。手动控制小车到不同位置和朝向，Tag 清晰可见时点一下图像窗口使其获得键盘焦点，再按 Enter 记录当前帧；按 `q` 或 Esc 退出。程序将逐行追加写入 `camera_extrinsic_samples.jsonl`，每组包含检测时间戳、`odom → base_link` 位姿、由 Tag 四角点和相机内参直接求得的 `camera_color_optical_frame → target_tag` 位姿、Tag ID 和检测质量。机器人应停稳后采样；里程计与检测时间戳偏差过大时该次不会写入。
+
+可覆盖默认话题、帧名、Tag ID 和输出路径，例如：
+
+```bash
+ros2 run bunker_tag_follower record_extrinsic --ros-args \
+  -p image_topic:=/camera/color/image_raw \
+  -p detections_topic:=/apriltag/detections \
+  -p output:=/tmp/extrinsic_samples.jsonl
+```
+
+该程序负责采样，不会自动求解或发布外参。采集时应让标定板保持固定，小车从多个距离和方向观察它；避免只直线移动或只在一个角度采样。Tag 边长误差、相机内参误差和轮速里程计漂移都会影响最终外参精度。

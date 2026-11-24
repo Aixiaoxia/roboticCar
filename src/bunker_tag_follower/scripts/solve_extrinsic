@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -e
+export PYTHONNOUSERSITE=1
+exec /usr/bin/python3 -s -m bunker_tag_follower.extrinsic_solver "$@"

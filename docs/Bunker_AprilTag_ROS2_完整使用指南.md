@@ -577,12 +577,14 @@ ros2 service call /follow/enable std_srvs/srv/SetBool '{data: false}'
 当前相机默认根坐标系是 `camera_link`，驱动已经发布内部光学坐标变换。
 需要补充 `base_link -> camera_link`，不要重复给 optical frame 再指定另一个父坐标系。
 
-静态变换发布命令的模板如下；尖括号中的值必须替换为实际测量结果，不能原样运行：
+当前初始外参按相机中心位于车体旋转中心前方 90 mm、高 539 mm，且相机水平朝前记录：`x=0.090 m, y=0, z=0.539 m, roll=pitch=yaw=0`。这是待实机验证的初始值，后续应根据测量和建图效果修正。
 
-```text
+在独立终端启动该静态变换（停止时按 Ctrl+C）：
+
+```bash
 ros2 run tf2_ros static_transform_publisher \
-  --x <米> --y <米> --z <米> \
-  --roll <弧度> --pitch <弧度> --yaw <弧度> \
+  --x 0.090 --y 0.0 --z 0.539 \
+  --roll 0.0 --pitch 0.0 --yaw 0.0 \
   --frame-id base_link --child-frame-id camera_link
 ```
 
